@@ -49,7 +49,13 @@ main.py
    uvicorn main:app --reload
    ```
 
-5. Verify health endpoint:
+5. Run DB migrations:
+
+   ```bash
+   alembic upgrade head
+   ```
+
+6. Verify health endpoint:
 
    ```bash
    curl http://127.0.0.1:8000/health
