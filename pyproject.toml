@@ -1,0 +1,19 @@
+[project]
+name = "critical-workflow-watchdog"
+version = "0.1.0"
+description = "Critical Workflow Watchdog v1 backend and execution agent foundation"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.30.0",
+  "pydantic-settings>=2.4.0",
+  "sqlalchemy>=2.0.0",
+  "psycopg[binary]>=3.2.0",
+  "redis>=5.0.0",
+  "playwright>=1.46.0",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
