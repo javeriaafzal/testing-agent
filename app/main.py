@@ -10,6 +10,7 @@ from app.config import settings
 from app.database import SessionLocal
 from app.models import Workflow
 from app.schemas import WorkflowCreate, WorkflowResponse
+from app.workers.queue import enqueue_test_job, enqueue_workflow_run
 
 app = FastAPI(title=settings.app_name)
 
@@ -76,3 +77,19 @@ def delete_workflow(workflow_id: uuid.UUID, db: Session = Depends(get_db)) -> Re
     db.delete(workflow)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@app.post("/workflows/{workflow_id}/enqueue", status_code=status.HTTP_202_ACCEPTED, tags=["workflows"])
+def enqueue_workflow(workflow_id: uuid.UUID, db: Session = Depends(get_db)) -> dict[str, str]:
+    workflow = db.get(Workflow, workflow_id)
+    if workflow is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
+
+    job = enqueue_workflow_run(workflow.id)
+    return {"job_id": job.id, "queue": job.origin, "workflow_id": str(workflow.id)}
+
+
+@app.post("/jobs/test", status_code=status.HTTP_202_ACCEPTED, tags=["jobs"])
+def enqueue_worker_test_job() -> dict[str, str]:
+    job = enqueue_test_job()
+    return {"job_id": job.id, "queue": job.origin}

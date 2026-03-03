@@ -66,3 +66,27 @@ Expected response:
 ```json
 {"status":"ok"}
 ```
+
+## Redis Queue Worker
+
+The API uses RQ + Redis for asynchronous workflow execution.
+
+- Enqueue a worker connectivity test job:
+
+  ```bash
+  curl -X POST http://127.0.0.1:8000/jobs/test
+  ```
+
+- Enqueue a workflow run:
+
+  ```bash
+  curl -X POST http://127.0.0.1:8000/workflows/<workflow_id>/enqueue
+  ```
+
+- Run the worker service:
+
+  ```bash
+  python -m workers.worker
+  ```
+
+The worker consumes queue jobs sequentially, and each workflow job runs `ExecutionOrchestrator.run(workflow)` asynchronously from the API request cycle.

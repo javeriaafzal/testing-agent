@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, object_session
 
 from app.agent.browser import BrowserSession
 from app.agent.evaluator import evaluate_api_logs
@@ -17,6 +17,13 @@ class ExecutionOrchestrator:
     def __init__(self, screenshot_dir: str = "artifacts/screenshots") -> None:
         self.screenshot_dir = Path(screenshot_dir)
         self.step_executor = StepExecutor()
+
+
+    def run(self, workflow: Workflow) -> Execution:
+        db = object_session(workflow)
+        if db is None:
+            raise RuntimeError("Workflow is not attached to an active database session")
+        return self.run_workflow(db, workflow)
 
     def run_workflow(self, db: Session, workflow: Workflow) -> Execution:
         execution = Execution(workflow_id=workflow.id, status=ExecutionStatus.FAIL)
