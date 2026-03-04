@@ -10,13 +10,19 @@ from app.agent.browser import BrowserSession
 from app.agent.evaluator import evaluate_api_logs
 from app.agent.network import NetworkInterceptor
 from app.agent.step_executor import StepExecutor
+from app.alerts.email import EmailAlertService, build_alert_payload
 from app.models import APILog, Execution, ExecutionStatus, Workflow
 
 
 class ExecutionOrchestrator:
-    def __init__(self, screenshot_dir: str = "artifacts/screenshots") -> None:
+    def __init__(
+        self,
+        screenshot_dir: str = "artifacts/screenshots",
+        email_alert_service: EmailAlertService | None = None,
+    ) -> None:
         self.screenshot_dir = Path(screenshot_dir)
         self.step_executor = StepExecutor()
+        self.email_alert_service = email_alert_service or EmailAlertService.from_settings()
 
 
     def run(self, workflow: Workflow) -> Execution:
@@ -48,6 +54,7 @@ class ExecutionOrchestrator:
                     execution.status = ExecutionStatus.FAIL
                     execution.failure_reason = json.dumps(failure)
                     execution.screenshot_path = self._capture_screenshot(page, execution.id.hex)
+                    self._send_failure_alert(workflow, failure, interceptor.logs, execution.screenshot_path)
                 else:
                     execution.status = ExecutionStatus.PASS
                     execution.failure_reason = None
@@ -64,6 +71,23 @@ class ExecutionOrchestrator:
             db.refresh(execution)
 
         return execution
+
+
+    def _send_failure_alert(
+        self,
+        workflow: Workflow,
+        failure: dict,
+        logs: list[dict],
+        screenshot_path: str | None,
+    ) -> None:
+        payload = build_alert_payload(failure, logs)
+        self.email_alert_service.send_failure_alert(
+            workflow_name=workflow.name,
+            endpoint=str(payload["endpoint"]),
+            status=payload["status"],
+            latency_ms=payload["latency_ms"],
+            screenshot_link=screenshot_path,
+        )
 
     def _save_api_logs(self, db: Session, execution: Execution, logs: list[dict]) -> None:
         for log in logs:
