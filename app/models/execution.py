@@ -12,6 +12,8 @@ from app.database import Base
 
 
 class ExecutionStatus(str, enum.Enum):
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
     PASS = "PASS"
     FAIL = "FAIL"
 

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import SessionLocal
-from app.models import Workflow
+from app.models import Execution, ExecutionStatus, Workflow
 from app.schemas import WorkflowCreate, WorkflowResponse
 from app.workers.queue import enqueue_test_job, enqueue_workflow_run
 
@@ -87,6 +87,28 @@ def enqueue_workflow(workflow_id: uuid.UUID, db: Session = Depends(get_db)) -> d
 
     job = enqueue_workflow_run(workflow.id)
     return {"job_id": job.id, "queue": job.origin, "workflow_id": str(workflow.id)}
+
+
+
+
+@app.post("/workflows/{workflow_id}/run", status_code=status.HTTP_202_ACCEPTED, tags=["workflows"])
+def run_workflow(workflow_id: uuid.UUID, db: Session = Depends(get_db)) -> dict[str, str]:
+    workflow = db.get(Workflow, workflow_id)
+    if workflow is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
+
+    execution = Execution(workflow_id=workflow.id, status=ExecutionStatus.QUEUED)
+    db.add(execution)
+    db.commit()
+    db.refresh(execution)
+
+    job = enqueue_workflow_run(workflow.id, execution.id)
+    return {
+        "job_id": job.id,
+        "queue": job.origin,
+        "workflow_id": str(workflow.id),
+        "execution_id": str(execution.id),
+    }
 
 
 @app.post("/jobs/test", status_code=status.HTTP_202_ACCEPTED, tags=["jobs"])
