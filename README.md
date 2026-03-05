@@ -83,6 +83,12 @@ The API uses RQ + Redis for asynchronous workflow execution.
   curl -X POST http://127.0.0.1:8000/workflows/<workflow_id>/enqueue
   ```
 
+- Retrieve execution history (including API logs):
+
+  ```bash
+  curl http://127.0.0.1:8000/workflows/<workflow_id>/executions
+  ```
+
 - Run the worker service:
 
   ```bash
