@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/watchdog"
     redis_url: str = "redis://localhost:6379/0"
     api_timeout_seconds: int = 5
+    workflow_run_timeout_seconds: int = 60
+    response_snippet_max_chars: int = 300
     latency_threshold_seconds: int = 3
     smtp_host: str = "localhost"
     smtp_port: int = 25
