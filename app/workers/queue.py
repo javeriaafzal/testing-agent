@@ -19,9 +19,11 @@ def get_workflow_queue() -> Queue:
     return Queue(name=QUEUE_NAME, connection=get_redis_connection())
 
 
-def enqueue_workflow_run(workflow_id: uuid.UUID) -> Job:
+def enqueue_workflow_run(workflow_id: uuid.UUID, execution_id: uuid.UUID | None = None) -> Job:
     queue = get_workflow_queue()
-    return queue.enqueue("workers.worker.run_workflow_job", str(workflow_id))
+    if execution_id is None:
+        return queue.enqueue("workers.worker.run_workflow_job", str(workflow_id))
+    return queue.enqueue("workers.worker.run_workflow_job", str(workflow_id), str(execution_id))
 
 
 def enqueue_test_job(message: str = "queue-online") -> Job:

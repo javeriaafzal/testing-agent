@@ -31,8 +31,14 @@ class ExecutionOrchestrator:
             raise RuntimeError("Workflow is not attached to an active database session")
         return self.run_workflow(db, workflow)
 
-    def run_workflow(self, db: Session, workflow: Workflow) -> Execution:
-        execution = Execution(workflow_id=workflow.id, status=ExecutionStatus.FAIL)
+    def run_workflow(self, db: Session, workflow: Workflow, execution: Execution | None = None) -> Execution:
+        if execution is None:
+            execution = Execution(workflow_id=workflow.id, status=ExecutionStatus.RUNNING)
+        else:
+            execution.status = ExecutionStatus.RUNNING
+            execution.failure_reason = None
+            execution.screenshot_path = None
+
         db.add(execution)
         db.commit()
         db.refresh(execution)
