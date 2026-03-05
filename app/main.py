@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import SessionLocal
 from app.models import Execution, ExecutionStatus, Workflow
-from app.schemas import WorkflowCreate, WorkflowResponse
+from app.schemas import ExecutionHistoryResponse, WorkflowCreate, WorkflowResponse
 from app.workers.queue import enqueue_test_job, enqueue_workflow_run
 
 app = FastAPI(title=settings.app_name)
@@ -89,6 +89,39 @@ def enqueue_workflow(workflow_id: uuid.UUID, db: Session = Depends(get_db)) -> d
     return {"job_id": job.id, "queue": job.origin, "workflow_id": str(workflow.id)}
 
 
+@app.get("/workflows/{workflow_id}/executions", response_model=list[ExecutionHistoryResponse], tags=["workflows"])
+def list_workflow_executions(workflow_id: uuid.UUID, db: Session = Depends(get_db)) -> list[ExecutionHistoryResponse]:
+    workflow = db.get(Workflow, workflow_id)
+    if workflow is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
+
+    executions = (
+        db.query(Execution)
+        .filter(Execution.workflow_id == workflow_id)
+        .order_by(Execution.started_at.desc())
+        .all()
+    )
+
+    history: list[ExecutionHistoryResponse] = []
+    for execution in executions:
+        history.append(
+            ExecutionHistoryResponse(
+                status=execution.status.value,
+                timestamp=execution.started_at,
+                failure_reason=execution.failure_reason,
+                api_logs=[
+                    {
+                        "endpoint": log.endpoint,
+                        "method": log.method,
+                        "status_code": log.status_code,
+                        "latency_ms": log.latency_ms,
+                        "response_snippet": log.response_snippet,
+                    }
+                    for log in execution.api_logs
+                ],
+            )
+        )
+    return history
 
 
 @app.post("/workflows/{workflow_id}/run", status_code=status.HTTP_202_ACCEPTED, tags=["workflows"])
