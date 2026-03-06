@@ -1,0 +1,114 @@
+Metadata-Version: 2.4
+Name: critical-workflow-watchdog
+Version: 0.1.0
+Summary: Critical Workflow Watchdog v1 backend and execution agent foundation
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi>=0.115.0
+Requires-Dist: uvicorn[standard]>=0.30.0
+Requires-Dist: pydantic-settings>=2.4.0
+Requires-Dist: sqlalchemy>=2.0.0
+Requires-Dist: alembic>=1.13.0
+Requires-Dist: psycopg[binary]>=3.2.0
+Requires-Dist: redis>=5.0.0
+Requires-Dist: rq>=1.16.0
+Requires-Dist: playwright>=1.46.0
+
+# Critical Workflow Watchdog (v1)
+
+Critical Workflow Watchdog is a lightweight autonomous monitoring agent for SMB teams.
+It validates mission-critical frontend workflows and detects backend API failures before customers report them.
+
+## Tech Stack
+
+- Python 3.11+
+- FastAPI
+- Playwright
+- PostgreSQL
+- Redis
+
+## Project Structure
+
+```text
+app/
+  main.py
+  config.py
+  database.py
+  models/
+  schemas/
+  services/
+  agent/
+  alerts/
+  scheduler/
+  workers/
+main.py
+```
+
+## Getting Started
+
+1. Create and activate a Python 3.11+ virtual environment.
+2. Install dependencies:
+
+   ```bash
+   pip install -e .
+   ```
+
+3. Install Playwright browser binaries:
+
+   ```bash
+   playwright install chromium
+   ```
+
+4. Run the API:
+
+   ```bash
+   uvicorn main:app --reload
+   ```
+
+5. Run DB migrations:
+
+   ```bash
+   alembic upgrade head
+   ```
+
+6. Verify health endpoint:
+
+   ```bash
+   curl http://127.0.0.1:8000/health
+   ```
+
+Expected response:
+
+```json
+{"status":"ok"}
+```
+
+## Redis Queue Worker
+
+The API uses RQ + Redis for asynchronous workflow execution.
+
+- Enqueue a worker connectivity test job:
+
+  ```bash
+  curl -X POST http://127.0.0.1:8000/jobs/test
+  ```
+
+- Enqueue a workflow run:
+
+  ```bash
+  curl -X POST http://127.0.0.1:8000/workflows/<workflow_id>/enqueue
+  ```
+
+- Retrieve execution history (including API logs):
+
+  ```bash
+  curl http://127.0.0.1:8000/workflows/<workflow_id>/executions
+  ```
+
+- Run the worker service:
+
+  ```bash
+  python -m workers.worker
+  ```
+
+The worker consumes queue jobs sequentially, and each workflow job runs `ExecutionOrchestrator.run(workflow)` asynchronously from the API request cycle.
